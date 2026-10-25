@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id           String   @id @default(cuid())
+  name         String
+  officeStart  String   @default("09:00")
+  graceMinutes Int      @default(15)
+  halfDayHours Float    @default(5)
+  weekend      String   @default("6,0")
+  officeLat    Float?
+  officeLng    Float?
+  radiusMeters Int      @default(150)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  name               String
+  email              String    @unique
+  passwordHash       String
+  role               String
+  active             Boolean   @default(true)
+  mustChangePassword Boolean   @default(false)
+  employee           Employee?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Department {
+  id         String     @id @default(cuid())
+  name       String     @unique
+  employees  Employee[]
+  createdAt  DateTime   @default(now())
+}
+
+model Designation {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  employees Employee[]
+  createdAt DateTime   @default(now())
+}
+
+model LeaveType {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  quota     Int            @default(0)
+  unlimited Boolean        @default(false)
+  requests  LeaveRequest[]
+}
+
+model Holiday {
+  id     String @id @default(cuid())
+  date   String @unique
+  name   String
+}
+
+model Employee {
+  id            String                  @id @default(cuid())
+  code          String                  @unique
+  fullName      String
+  email         String                  @unique
+  phone         String                  @default("")
+  address       String                  @default("")
+  gender        String                  @default("")
+  status        String                  @default("ACTIVE")
+  joinDate      DateTime
+  exitDate      DateTime?
+  basicSalary   Float
+  departmentId  String
+  designationId String
+  userId        String?                 @unique
+  department    Department              @relation(fields: [departmentId], references: [id])
+  designation   Designation             @relation(fields: [designationId], references: [id])
+  user          User?                   @relation(fields: [userId], references: [id])
+  attendance    Attendance[]
+  corrections   AttendanceCorrection[]
+  leaves        LeaveRequest[]
+  payslips      Payslip[]
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+}
+
+model Attendance {
+  id         String                  @id @default(cuid())
+  employeeId String
+  date       String
+  checkIn    DateTime?
+  checkOut   DateTime?
+  status     String
+  source     String                  @default("web")
+  notes      String                  @default("")
+  employee   Employee                @relation(fields: [employeeId], references: [id])
+  corrections AttendanceCorrection[]
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+
+  @@unique([employeeId, date])
+}
+
+model AttendanceCorrection {
+  id           String      @id @default(cuid())
+  attendanceId String?
+  employeeId   String
+  date         String
+  reason       String
+  requestedIn  String?
+  requestedOut String?
+  status       String      @default("PENDING")
+  comment      String      @default("")
+  attendance   Attendance? @relation(fields: [attendanceId], references: [id])
+  employee     Employee    @relation(fields: [employeeId], references: [id])
+  createdAt    DateTime    @default(now())
+}
+
+model LeaveRequest {
+  id          String    @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  startDate   String
+  endDate     String
+  days        Float
+  reason      String
+  status      String    @default("PENDING")
+  comment     String    @default("")
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  leaveType   LeaveType @relation(fields: [leaveTypeId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model PayrollRun {
+  id        String    @id @default(cuid())
+  year      Int
+  month     Int
+  status    String    @default("DRAFT")
+  payslips  Payslip[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([year, month])
+}
+
+model Payslip {
+  id             String     @id @default(cuid())
+  runId          String
+  employeeId     String
+  basic          Float
+  gross          Float
+  workingDays    Int
+  absentDays     Float
+  unpaidDays     Float
+  halfDays       Float
+  deductions     Float
+  annualTax      Float
+  tax            Float
+  net            Float
+  run            PayrollRun @relation(fields: [runId], references: [id])
+  employee       Employee   @relation(fields: [employeeId], references: [id])
+
+  @@unique([runId, employeeId])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  authorId  String
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actorName String
+  action    String
+  entity    String
+  entityId  String
+  before    String   @default("")
+  after     String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model AiLog {
+  id        String   @id @default(cuid())
+  userId    String
+  prompt    String
+  response  String
+  createdAt DateTime @default(now())
+}
