@@ -1,18 +1,24 @@
 {
-  "name": "my-app",
+  "name": "hcm-lite",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "backend:dev": "tsx watch backend/server.ts",
+    "backend:start": "tsx backend/server.ts",
+    "dev:all": "concurrently -k -n web,api -c cyan,green \"next dev\" \"tsx watch backend/server.ts\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:push": "prisma db push",
-    "db:generate": "prisma generate"
+    "db:push": "prisma db push --schema backend/prisma/schema.prisma",
+    "db:generate": "prisma generate --schema backend/prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
     "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.6.1",
+    "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
@@ -29,6 +35,10 @@
     "prisma": "^6.19.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "@types/jsonwebtoken": "^9.0.10"
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.3",
+    "concurrently": "^9.2.1",
+    "tsx": "^4.20.6"
   }
 }

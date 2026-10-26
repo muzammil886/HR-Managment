@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { api, AuthUser } from "@/lib/client";
+import { api, roleHome, type AuthUser } from "@/lib/client";
 
 type Ctx = {
   user: AuthUser | null;
@@ -22,7 +22,8 @@ export function useAuth() {
   return useContext(AuthCtx);
 }
 
-const publicPaths = ["/login", "/signup", "/setup"];
+const publicPaths = ["/", "/login", "/signup", "/setup"];
+const rolePanelPaths = ["/admin", "/hr", "/employee"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -30,28 +31,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  async function refresh() {
-    const data = await api<{ user: AuthUser | null; setup?: { ready: boolean } }>("/api/auth/me");
+  async function refresh(): Promise<void> {
+    const data = await api<{ user: AuthUser | null }>("/api/auth/me");
     setUser(data.user);
-    return data;
   }
 
   useEffect(() => {
-    refresh()
+    let active = true;
+    api<{ user: AuthUser | null; setup?: { ready: boolean } }>("/api/auth/me")
       .then((data) => {
-        if (!data.setup?.ready && pathname !== "/setup" && pathname !== "/signup") {
+        if (!active) return;
+        setUser(data.user);
+        if (!data.setup?.ready && pathname !== "/setup" && pathname !== "/signup" && pathname !== "/login") {
           router.replace("/signup");
-        } else if (data.setup?.ready && (pathname === "/setup" || pathname === "/signup")) {
+        } else if (data.setup?.ready && pathname === "/setup") {
           router.replace("/login");
         } else if (!data.user && !publicPaths.includes(pathname)) router.replace("/login");
         else if (data.user?.mustChangePassword && pathname !== "/change-password") {
           router.replace("/change-password");
-        } else if (data.user && (pathname === "/login" || pathname === "/signup")) {
-          router.replace("/dashboard");
+        } else if (data.user && !data.user.mustChangePassword) {
+          const home = roleHome[data.user.role];
+          if (pathname === "/" || pathname === "/login" || pathname === "/signup" || pathname === "/dashboard" || (rolePanelPaths.includes(pathname) && pathname !== home)) {
+            router.replace(home);
+          }
         }
       })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
   }, [pathname, router]);
 
   async function logout() {

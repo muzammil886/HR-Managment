@@ -2,13 +2,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f8fc;
-  --foreground: #172033;
-  --primary: #5b5ce2;
-  --primary-dark: #4748c9;
+  --background: #f3f7f5;
+  --foreground: #18302e;
+  --primary: #147d72;
+  --primary-dark: #0f625a;
   --muted: #78839a;
-  --border: #e8ecf4;
+  --border: #dfe9e5;
   --surface: #ffffff;
+  --accent: #e9b979;
 }
 
 * {
@@ -22,9 +23,9 @@ html {
 
 body {
   margin: 0;
-  background: var(--background);
+  background: linear-gradient(180deg, #f7faf8 0%, var(--background) 100%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -50,15 +51,21 @@ button {
 }
 
 ::selection {
-  background: #dedfff;
-  color: #3738a7;
+  background: #d1eee4;
+  color: #115e59;
 }
 
 .premium-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(31, 42, 74, 0.035);
+  border-radius: 20px;
+  box-shadow: 0 8px 28px rgba(25, 58, 52, 0.045);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.premium-card:hover {
+  border-color: #cfe1da;
+  box-shadow: 0 12px 34px rgba(25, 58, 52, 0.075);
 }
 
 .premium-input {
@@ -67,14 +74,14 @@ button {
   border-radius: 11px;
   padding: 12px 14px;
   background: #fff;
-  color: #172033;
+  color: #18302e;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .premium-input:focus {
-  border-color: #7778ed;
-  box-shadow: 0 0 0 4px rgba(91, 92, 226, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(20, 125, 114, 0.12);
 }
 
 .premium-button {
@@ -94,6 +101,19 @@ button {
 .premium-button:hover {
   background: var(--primary-dark);
   transform: translateY(-1px);
+}
+
+input,
+select,
+textarea {
+  accent-color: var(--primary);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgba(20, 125, 114, 0.45);
+  outline-offset: 2px;
 }
 
 .premium-button:focus-visible,

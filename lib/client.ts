@@ -13,6 +13,12 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
 
 export type Role = "ADMIN" | "HR" | "EMPLOYEE";
 
+export const roleHome: Record<Role, string> = {
+  ADMIN: "/admin",
+  HR: "/hr",
+  EMPLOYEE: "/employee",
+};
+
 export type AuthUser = {
   id: string;
   email: string;

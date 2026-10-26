@@ -14,7 +14,7 @@ export default function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#f6f8fc]">
+    <div className="min-h-screen bg-[#f3f7f5]">
       <div className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:block">
         <Sidebar />
       </div>
@@ -23,7 +23,7 @@ export default function AppShell({
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             aria-label="Close navigation"
-            className="absolute inset-0 bg-[#172033]/40"
+            className="absolute inset-0 bg-[#18302e]/40"
             onClick={() => setSidebarOpen(false)}
           />
           <div className="relative z-10 h-full w-[270px] max-w-[85vw] overflow-y-auto">
@@ -31,7 +31,7 @@ export default function AppShell({
               <button
                 aria-label="Close menu"
                 onClick={() => setSidebarOpen(false)}
-                className="rounded-lg bg-white p-2 text-[#5b5ce2]"
+                className="rounded-lg bg-white p-2 text-[#147d72]"
               >
                 <X size={20} />
               </button>
@@ -42,16 +42,16 @@ export default function AppShell({
       )}
 
       <div className="lg:pl-[250px]">
-        <div className="flex items-center gap-3 border-b border-[#e8ecf4] bg-white px-5 py-3 lg:hidden">
+        <div className="flex items-center gap-3 border-b border-[#dfe9e5] bg-white px-5 py-3 lg:hidden">
           <button
             aria-label="Open navigation"
             onClick={() => setSidebarOpen(true)}
-            className="rounded-lg border border-[#e8ecf4] p-2 text-[#5b5ce2]"
+            className="rounded-lg border border-[#dfe9e5] p-2 text-[#147d72]"
           >
             <Menu size={20} />
           </button>
-          <span className="font-bold text-[#172033]">
-            HCM<span className="text-[#5b5ce2]">Lite</span>
+          <span className="font-bold text-[#18302e]">
+            HCM<span className="text-[#147d72]">Lite</span>
           </span>
         </div>
 

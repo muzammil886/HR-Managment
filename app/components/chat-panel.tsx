@@ -37,15 +37,15 @@ export default function ChatPanel() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full bg-[#5b5ce2] px-4 font-semibold text-white shadow-lg"
+        className="fixed bottom-5 right-5 z-40 flex h-12 items-center gap-2 rounded-full bg-[#147d72] px-4 font-semibold text-white shadow-lg"
       >
         <MessageCircle size={18} /> Ask assistant
       </button>
       {open && (
-        <div className="fixed bottom-5 right-5 z-50 flex h-[460px] w-[min(100%-24px,380px)] flex-col rounded-2xl border border-[#e8ecf4] bg-white shadow-2xl">
+        <div className="fixed bottom-5 right-5 z-50 flex h-[460px] w-[min(100%-24px,380px)] flex-col rounded-2xl border border-[#dfe9e5] bg-white shadow-2xl">
           <div className="flex items-center justify-between border-b border-[#edf0f6] px-4 py-3">
             <div>
-              <p className="font-bold text-[#172033]">HCM assistant</p>
+              <p className="font-bold text-[#18302e]">HCM assistant</p>
               <p className="text-xs text-[#8993a7]">AI-generated · uses your access</p>
             </div>
             <button type="button" aria-label="Close assistant" onClick={() => setOpen(false)}>
@@ -59,7 +59,7 @@ export default function ChatPanel() {
             {messages.map((m, i) => (
               <div
                 key={i}
-                className={`rounded-xl px-3 py-2 ${m.role === "user" ? "ml-8 bg-[#5b5ce2] text-white" : "mr-8 bg-[#f4f5ff] text-[#273249]"}`}
+                className={`rounded-xl px-3 py-2 ${m.role === "user" ? "ml-8 bg-[#147d72] text-white" : "mr-8 bg-[#f4f5ff] text-[#273249]"}`}
               >
                 {m.text}
                 {m.role === "ai" && (

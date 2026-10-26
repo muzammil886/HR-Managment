@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/client";
+import { api, roleHome, type AuthUser } from "@/lib/client";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -16,11 +16,11 @@ export default function ChangePasswordPage() {
     setError("");
     setLoading(true);
     try {
-      await api("/api/auth/change-password", {
+      const updated = await api<AuthUser>("/api/auth/change-password", {
         method: "POST",
         body: JSON.stringify({ current, next }),
       });
-      router.replace("/dashboard");
+      if (updated) router.replace(roleHome[updated.role]);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update password");
@@ -32,7 +32,7 @@ export default function ChangePasswordPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f5f6ff] px-4">
       <form onSubmit={onSubmit} className="w-full max-w-md space-y-4 rounded-[28px] bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-extrabold text-[#172033]">Change password</h1>
+        <h1 className="text-2xl font-extrabold text-[#18302e]">Change password</h1>
         {error ? <p className="text-sm font-medium text-red-700">{error}</p> : null}
         <input
           type="password"

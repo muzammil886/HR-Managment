@@ -1,108 +1,112 @@
-
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, UserPlus, ArrowUpRight, Users } from "lucide-react";
+import { ArrowUpRight, Search, UserPlus, Users } from "lucide-react";
 import AppShell from "../components/layout/dashboard-shell";
+import { useAuth } from "../providers";
+import { api } from "@/lib/client";
 
-const data = [
-  { id: "EMP001", name: "Ayesha Khan", role: "Product Designer", department: "Design", email: "ayesha@example.com", status: "Active" },
-  { id: "EMP002", name: "Hamza Ali", role: "Frontend Developer", department: "Engineering", email: "hamza@example.com", status: "Active" },
-  { id: "EMP003", name: "Sara Ahmed", role: "HR Specialist", department: "Human Resources", email: "sara@example.com", status: "On Leave" },
-  { id: "EMP004", name: "Usman Raza", role: "Accountant", department: "Finance", email: "usman@example.com", status: "Active" },
-  { id: "EMP005", name: "Mariam Noor", role: "Marketing Executive", department: "Marketing", email: "mariam@example.com", status: "Inactive" },
-];
+type Department = { id: string; name: string };
+type Designation = { id: string; name: string };
+type Employee = { id: string; code: string; fullName: string; email: string; status: string; department: Department; designation: Designation };
+type Directory = { total: number; items: Employee[] };
+type Org = { departments: Department[]; designations: Designation[] };
+type CsvResult = { dryRun: boolean; issues: { row: number; field: string; reason: string }[]; wouldImport?: number; imported?: number };
 
 export default function EmployeesPage() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState("All");
+  const [departmentId, setDepartmentId] = useState("");
+  const [org, setOrg] = useState<Org>({ departments: [], designations: [] });
+  const [directory, setDirectory] = useState<Directory>({ total: 0, items: [] });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [salary, setSalary] = useState("");
+  const [joinDate, setJoinDate] = useState(new Date().toISOString().slice(0, 10));
+  const [newDepartment, setNewDepartment] = useState("");
+  const [newDesignation, setNewDesignation] = useState("");
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [csv, setCsv] = useState("");
+  const [csvResult, setCsvResult] = useState<CsvResult | null>(null);
 
-  const filtered = useMemo(() => data.filter((employee) => {
-    const term = search.toLowerCase();
-    return (
-      `${employee.name} ${employee.email} ${employee.id} ${employee.role}`.toLowerCase().includes(term) &&
-      (department === "All" || employee.department === department)
-    );
-  }), [search, department]);
+  async function load() {
+    setLoading(true);
+    try {
+      const [result, organization] = await Promise.all([
+        api<Directory>(`/api/employees?pageSize=50${search ? `&q=${encodeURIComponent(search)}` : ""}${departmentId ? `&departmentId=${encodeURIComponent(departmentId)}` : ""}`),
+        api<Org>("/api/org"),
+      ]);
+      setDirectory(result);
+      setOrg(organization);
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load employees.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let active = true;
+    const query = `/api/employees?pageSize=50${search ? `&q=${encodeURIComponent(search)}` : ""}${departmentId ? `&departmentId=${encodeURIComponent(departmentId)}` : ""}`;
+    Promise.all([api<Directory>(query), api<Org>("/api/org")])
+      .then(([result, organization]) => {
+        if (!active) return;
+        setDirectory(result);
+        setOrg(organization);
+        setError("");
+      })
+      .catch((err: unknown) => { if (active) setError(err instanceof Error ? err.message : "Could not load employees."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [search, departmentId]);
+
+  async function register(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const result = await api<{ temporaryPassword: string }>("/api/employees", {
+        method: "POST",
+        body: JSON.stringify({ fullName: name, email, phone, basicSalary: Number(salary), joinDate, departmentId: newDepartment, designationId: newDesignation }),
+      });
+      setTemporaryPassword(result.temporaryPassword);
+      setName(""); setEmail(""); setPhone(""); setSalary("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not register employee.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function importCsv(dryRun: boolean) {
+    setSaving(true); setError("");
+    try {
+      const result = await api<CsvResult>("/api/employees/import", { method: "POST", body: JSON.stringify({ csv, dryRun }) });
+      setCsvResult(result);
+      if (!dryRun && result.imported) await load();
+    } catch (err) { setError(err instanceof Error ? err.message : "Could not import CSV."); }
+    finally { setSaving(false); }
+  }
 
   return (
     <AppShell>
-      <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-sm text-[#8993a7]">People / Directory</p>
-          <h1 className="mt-2 text-2xl font-extrabold text-[#172033]">Employees</h1>
-          <p className="mt-2 text-sm text-[#8993a7]">Manage your team and employee records.</p>
-        </div>
-        <div className="flex items-center gap-2 rounded-xl bg-[#eeefff] px-4 py-3 text-sm font-semibold text-[#5b5ce2]">
-          <UserPlus size={18} /> Add employee
-          <span className="text-xs">(coming soon)</span>
-        </div>
-      </div>
+      <div className="mb-7 flex flex-wrap items-center justify-between gap-4"><div><p className="text-sm text-[#8993a7]">People / Directory</p><h1 className="mt-2 text-2xl font-extrabold text-[#18302e]">Employees</h1><p className="mt-2 text-sm text-[#8993a7]">Live employee records from your organization.</p></div><div className="rounded-xl bg-[#e8f5f0] px-4 py-3 text-sm font-semibold text-[#147d72]"><Users className="mr-2 inline" size={18} />{directory.total} employees</div></div>
+      {error && <p role="alert" className="mb-4 rounded-xl bg-[#fff0ef] px-4 py-3 text-sm text-[#b94b4b]">{error}</p>}
+      {temporaryPassword && <p className="mb-4 rounded-xl bg-[#e6f8f0] px-4 py-3 text-sm text-[#16865f]">Employee login created. Give them this temporary password securely: <strong>{temporaryPassword}</strong>. It must be changed at first sign-in.<button className="ml-3 underline" onClick={() => setTemporaryPassword("")}>Dismiss</button></p>}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {[
-          { label: "Total employees", value: data.length, icon: Users },
-          { label: "Active employees", value: data.filter(e => e.status === "Active").length, icon: UserPlus },
-          { label: "Departments", value: new Set(data.map(e => e.department)).size, icon: ArrowUpRight },
-        ].map(({ label, value, icon: Icon }) => (
-          <div key={label} className="premium-card flex items-center gap-4 p-5">
-            <div className="rounded-xl bg-[#eeefff] p-3 text-[#5b5ce2]"><Icon size={21} /></div>
-            <div><p className="text-sm text-[#8993a7]">{label}</p><p className="mt-1 text-2xl font-extrabold text-[#172033]">{value}</p></div>
-          </div>
-        ))}
-      </div>
+      {user?.role === "HR" && <details className="premium-card mb-6 p-5"><summary className="cursor-pointer list-none font-bold text-[#147d72]"><UserPlus className="mr-2 inline" size={18} /> Register employee</summary><form onSubmit={register} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"><input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="rounded-xl border px-3 py-2.5 text-sm" /><input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="rounded-xl border px-3 py-2.5 text-sm" /><input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (optional)" className="rounded-xl border px-3 py-2.5 text-sm" /><input required min="1" type="number" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="Basic salary" className="rounded-xl border px-3 py-2.5 text-sm" /><input required type="date" value={joinDate} onChange={(e) => setJoinDate(e.target.value)} className="rounded-xl border px-3 py-2.5 text-sm" /><select required value={newDepartment} onChange={(e) => setNewDepartment(e.target.value)} className="rounded-xl border bg-white px-3 py-2.5 text-sm"><option value="">Select department</option>{org.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select><select required value={newDesignation} onChange={(e) => setNewDesignation(e.target.value)} className="rounded-xl border bg-white px-3 py-2.5 text-sm"><option value="">Select designation</option>{org.designations.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select><button disabled={saving} className="rounded-xl bg-[#147d72] px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{saving ? "Creating…" : "Create employee login"}</button></form></details>}
 
-      <section className="premium-card overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#edf0f6] p-5">
-          <div>
-            <h2 className="font-bold text-[#172033]">Employee directory</h2>
-            <p className="mt-1 text-xs text-[#8993a7]">{filtered.length} sample records</p>
-          </div>
-          <div className="flex w-full flex-wrap gap-3 sm:w-auto">
-            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#e8ecf4] px-3 py-2.5 sm:w-56">
-              <Search size={17} className="shrink-0 text-[#929cb0]" />
-              <input aria-label="Search employees" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employees..." className="w-full min-w-0 text-sm outline-none" />
-            </div>
-            <select aria-label="Filter by department" value={department} onChange={e => setDepartment(e.target.value)} className="rounded-xl border border-[#e8ecf4] bg-white px-3 py-2.5 text-sm text-[#536078] outline-none">
-              <option>All</option>
-              {[...new Set(data.map(e => e.department))].map(d => <option key={d}>{d}</option>)}
-            </select>
-          </div>
-        </div>
+      {user?.role === "HR" && <details className="premium-card mb-6 p-5"><summary className="cursor-pointer font-bold text-[#147d72]">CSV import / export</summary><p className="mt-2 text-xs text-[#8993a7]">Required headers: fullName,email,department,designation,joinDate,basicSalary. Dates must use YYYY-MM-DD.</p><input type="file" accept=".csv,text/csv" onChange={async (event) => { const file = event.target.files?.[0]; if (file) { setCsv(await file.text()); setCsvResult(null); } }} className="mt-3 block text-sm" /><div className="mt-3 flex flex-wrap gap-2"><button onClick={() => void importCsv(true)} disabled={saving || !csv} className="rounded-xl border px-4 py-2.5 text-sm font-semibold disabled:opacity-50">Check CSV</button><button onClick={() => void importCsv(false)} disabled={saving || !csv || !csvResult || csvResult.issues.length > 0} className="rounded-xl bg-[#147d72] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">Import checked rows</button><button type="button" onClick={() => { const link = document.createElement("a"); link.href = "/api/employees/export"; link.download = "employees.csv"; link.click(); }} className="rounded-xl border px-4 py-2.5 text-sm font-semibold">Export CSV</button></div>{csvResult && <div className="mt-3 rounded-xl bg-[#fafbfe] p-3 text-sm"><p>{csvResult.issues.length ? `${csvResult.issues.length} issue(s) found.` : csvResult.dryRun ? `${csvResult.wouldImport} row(s) ready to import.` : `${csvResult.imported} employee(s) imported.`}</p>{csvResult.issues.map((issue, index) => <p key={`${issue.row}-${issue.field}-${index}`} className="mt-1 text-xs text-[#b94b4b]">Row {issue.row}, {issue.field}: {issue.reason}</p>)}</div>}</details>}
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-left">
-            <thead className="bg-[#fafbfe] text-xs text-[#929cb0]">
-              <tr>
-                <th className="px-5 py-4 font-semibold">EMPLOYEE</th>
-                <th className="px-5 py-4 font-semibold">ID</th>
-                <th className="px-5 py-4 font-semibold">DEPARTMENT</th>
-                <th className="px-5 py-4 font-semibold">STATUS</th>
-                <th className="px-5 py-4 font-semibold">DETAILS</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e, index) => (
-                <tr key={e.id} className="border-t border-[#f0f2f7] transition hover:bg-[#fafbff]">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${["bg-pink-100 text-pink-700", "bg-blue-100 text-blue-700", "bg-purple-100 text-purple-700", "bg-amber-100 text-amber-700", "bg-teal-100 text-teal-700"][index % 5]}`}>
-                        {e.name.split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div><p className="text-sm font-semibold text-[#273249]">{e.name}</p><p className="mt-1 text-xs text-[#929cb0]">{e.email}</p></div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-[#69758b]">{e.id}</td>
-                  <td className="px-5 py-4 text-sm text-[#69758b]">{e.department}</td>
-                  <td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${e.status === "Active" ? "bg-[#e6f8f0] text-[#16865f]" : e.status === "On Leave" ? "bg-[#fff3e2] text-[#c78325]" : "bg-[#f0f2f6] text-[#78839a]"}`}>{e.status}</span></td>
-                  <td className="px-5 py-4"><Link href={`/employees/${e.id}`} aria-label={`View ${e.name}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[#5b5ce2] hover:underline">View <ArrowUpRight size={15} /></Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {filtered.length === 0 && <p className="p-10 text-center text-sm text-[#8993a7]">No employees match your search.</p>}
-        </div>
+      <section className="premium-card overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#edf0f6] p-5"><div><h2 className="font-bold text-[#18302e]">Employee directory</h2><p className="mt-1 text-xs text-[#8993a7]">Search is applied on the server.</p></div><div className="flex flex-wrap gap-3"><div className="flex items-center gap-2 rounded-xl border px-3 py-2.5"><Search size={17} className="text-[#929cb0]" /><input aria-label="Search employees" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name, email or code" className="w-48 text-sm outline-none" /></div><select aria-label="Filter by department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} className="rounded-xl border bg-white px-3 py-2.5 text-sm"><option value="">All departments</option>{org.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}</select></div></div>
+        <div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left"><thead className="bg-[#fafbfe] text-xs text-[#929cb0]"><tr><th className="px-5 py-4">EMPLOYEE</th><th className="px-5 py-4">CODE</th><th className="px-5 py-4">DEPARTMENT</th><th className="px-5 py-4">STATUS</th><th className="px-5 py-4">DETAILS</th></tr></thead><tbody>{directory.items.map((employee) => <tr key={employee.id} className="border-t border-[#f0f2f7]"><td className="px-5 py-4"><p className="text-sm font-semibold text-[#273249]">{employee.fullName}</p><p className="mt-1 text-xs text-[#929cb0]">{employee.email}</p></td><td className="px-5 py-4 text-sm text-[#69758b]">{employee.code}</td><td className="px-5 py-4 text-sm text-[#69758b]">{employee.department.name}</td><td className="px-5 py-4 text-sm">{employee.status}</td><td className="px-5 py-4"><Link href={`/employees/${employee.id}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[#147d72]">View <ArrowUpRight size={15} /></Link></td></tr>)}</tbody></table>{!loading && !directory.items.length && <p className="p-10 text-center text-sm text-[#8993a7]">No employees found. Register employees to populate the directory.</p>}{loading && <p className="p-6 text-center text-sm text-[#8993a7]">Loading…</p>}</div>
       </section>
     </AppShell>
   );
